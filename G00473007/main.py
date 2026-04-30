@@ -16,96 +16,109 @@ neo4j_password = "password123"
 
 # --- MYSQL FUNCTIONS ---
 
-def get_attendees():
+def view_speakers_and_sessions():
+    try:
+        conn = mysql.connector.connect(**mysql_config)
+        cursor = conn.cursor()
+        cursor.execute("SELECT sessionTitle, speakerName FROM session")
+        rows = cursor.fetchall()
+        print("\n--- Speakers & Sessions ---")
+        for row in rows:
+            print(f"Speaker: {row[1]:<20} | Session: {row[0]}")
+        conn.close()
+    except Exception as e:
+        print(f"Error: {e}")
+
+def view_attendees_by_company():
     try:
         conn = mysql.connector.connect(**mysql_config)
         cursor = conn.cursor()
         query = """
-        SELECT a.attendeeID, a.attendeeName, c.companyName 
+        SELECT a.attendeeName, c.companyName 
         FROM attendee a 
         JOIN company c ON a.attendeeCompanyID = c.companyID
+        ORDER BY c.companyName
         """
         cursor.execute(query)
         rows = cursor.fetchall()
-        print("\n--- Attendee List (MySQL) ---")
+        print("\n--- Attendees by Company ---")
         for row in rows:
-            print(f"ID: {row[0]} | Name: {row[1]:<15} | Company: {row[2]}")
+            print(f"Company: {row[1]:<20} | Attendee: {row[0]}")
         conn.close()
     except Exception as e:
-        print(f"MySQL Error: {e}")
+        print(f"Error: {e}")
 
-def get_sessions():
-    try:
-        conn = mysql.connector.connect(**mysql_config)
-        cursor = conn.cursor()
-        cursor.execute("SELECT sessionID, sessionTitle, speakerName FROM session")
-        rows = cursor.fetchall()
-        print("\n--- Conference Sessions (MySQL) ---")
-        for row in rows:
-            print(f"ID: {row[0]} | Title: {row[1]:<35} | Speaker: {row[2]}")
-        conn.close()
-    except Exception as e:
-        print(f"MySQL Error: {e}")
-
-# --- NEO4J FUNCTIONS ---
-
-def get_attendee_network():
-    try:
-        driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
-        with driver.session() as session:
-            query = """
-            MATCH (a:Attendee)-[r:CONNECTED_TO]->(b:Attendee)
-            RETURN a.AttendeeID AS from_id, b.AttendeeID AS to_id
-            LIMIT 20
-            """
-            result = session.run(query)
-            print("\n--- Attendee Networking (Neo4j) ---")
-            for record in result:
-                print(f"Attendee {record['from_id']} is CONNECTED TO Attendee {record['to_id']}")
-        driver.close()
-    except Exception as e:
-        print(f"Neo4j Error: {e}")
-def get_rooms():
+def view_rooms():
     try:
         conn = mysql.connector.connect(**mysql_config)
         cursor = conn.cursor()
         cursor.execute("SELECT roomName, capacity FROM room")
         rows = cursor.fetchall()
-        print("\n--- Conference Rooms (MySQL) ---")
+        print("\n--- Conference Rooms ---")
         for row in rows:
             print(f"Room: {row[0]:<20} | Capacity: {row[1]}")
         conn.close()
     except Exception as e:
-        print(f"MySQL Error (Rooms): {e}")
+        print(f"Error: {e}")
 
-# --- MAIN MENU ---
+# --- NEO4J FUNCTIONS ---
+
+def view_connected_attendees():
+    try:
+        driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
+        with driver.session() as session:
+            query = "MATCH (a:Attendee)-[:CONNECTED_TO]->(b:Attendee) RETURN a.AttendeeID, b.AttendeeID"
+            result = session.run(query)
+            print("\n--- Connected Attendees ---")
+            for record in result:
+                print(f"Attendee {record[0]} <-> Attendee {record[1]}")
+        driver.close()
+    except Exception as e:
+        print(f"Error: {e}")
+
+# --- PLACEHOLDERS FOR ADD FUNCTIONS (Will be implemented in next tasks) ---
+
+def add_new_attendee():
+    print("\n[INFO] 'Add New Attendee' functionality will be implemented soon.")
+
+def add_attendee_connection():
+    print("\n[INFO] 'Add Attendee Connection' functionality will be implemented soon.")
+
+# --- MAIN MENU (Exactly as in Figure 2) ---
 
 def main_menu():
     while True:
-        print("\n" + "="*40)
-        print("   CONFERENCE MANAGEMENT SYSTEM")
-        print("="*40)
-        print("1. View Attendees & Companies (SQL)")
-        print("2. View Conference Sessions (SQL)")
-        print("3. View Attendee Network (Neo4j)")
-        print("4. View Conference Rooms (SQL)") # Nowa opcja
-        print("0. Exit")
+        print("\nConference Management")
+        print("---------------------")
+        print("\nMENU")
+        print("====")
+        print("1 – View Speakers & Sessions")
+        print("2 – View Attendees by Company")
+        print("3 – Add New Attendee")
+        print("4 – View Connected Attendees")
+        print("5 – Add Attendee Connection")
+        print("6 – View Rooms")
+        print("x – Exit application")
         
-        choice = input("\nSelect an option: ")
+        choice = input("Choice: ").strip().lower()
         
         if choice == '1':
-            get_attendees()
+            view_speakers_and_sessions()
         elif choice == '2':
-            get_sessions()
+            view_attendees_by_company()
         elif choice == '3':
-            get_attendee_network()
+            add_new_attendee()
         elif choice == '4':
-            get_rooms() # Wywołanie nowej funkcji
-        elif choice == '0':
-            print("Closing the application. Goodbye!")
+            view_connected_attendees()
+        elif choice == '5':
+            add_attendee_connection()
+        elif choice == '6':
+            view_rooms()
+        elif choice == 'x':
+            print("Exiting...")
             break
         else:
-            print("Invalid selection, please try again.")
+            print("Invalid choice, please try again.")
 
 if __name__ == "__main__":
     main_menu()
