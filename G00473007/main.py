@@ -58,25 +58,32 @@ def view_speakers_and_sessions():
 
 def view_attendees_by_company():
     try:
-        # 1. Ask for Company ID
-        company_id = input("Enter Company ID : ").strip()
-        
         conn = mysql.connector.connect(**mysql_config)
         cursor = conn.cursor()
 
-        # 2. First, get the company name to display it
+        # 1. Validation Loop 
+        while True:
+            company_id_input = input("Enter Company ID : ").strip()
+            if company_id_input.isdigit() and int(company_id_input) > 0:
+                company_id = int(company_id_input)
+                break
+            # If input is invalid, show error and prompt again
+            print("Invalid input. Please enter a positive integer for Company ID.")
+
+        # 2. Check if company exists 
         cursor.execute("SELECT companyName FROM company WHERE companyID = %s", (company_id,))
         company_row = cursor.fetchone()
 
         if not company_row:
-            print(f"No company found with ID: {company_id}")
+            print(f"Company with ID {company_id} doesn't exist")
             conn.close()
             return
 
-        print(f"{company_row[0]} Attendees")
+        company_name = company_row[0]
+        print(f"\n{company_name} Attendees")
         print("-" * 30)
 
-        # 3. Main Query joining Attendee, Registration, Session, and Room
+        # 3. Main Query
         query = """
         SELECT a.attendeeName, a.attendeeDOB, s.sessionTitle, s.speakerName, s.sessionDate, r.roomName
         FROM attendee a
@@ -90,12 +97,11 @@ def view_attendees_by_company():
         cursor.execute(query, (company_id,))
         rows = cursor.fetchall()
 
+        # 4. Handle company with no attendees 
         if not rows:
-            print("No attendees found for this company in any sessions.")
+            print(f"No attendees found for  {company_name}")
         else:
             for row in rows:
-                # Formatting: Name | DOB | Session | Speaker | Date | Room
-                # Using row[1].strftime if you want specific date format
                 print(f"{row[0]:<12} | {row[1]} | {row[2]:<25} | {row[3]:<15} | {row[4]} | {row[5]}")
 
         conn.close()
