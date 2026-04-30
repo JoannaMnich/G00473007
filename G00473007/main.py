@@ -140,7 +140,40 @@ def view_connected_attendees():
 # --- PLACEHOLDERS FOR ADD FUNCTIONS  ---
 
 def add_new_attendee():
-    print("\n[INFO] 'Add New Attendee' functionality will be implemented soon.")
+    print("\nAdd New Attendee")
+    print("----------------")
+    
+    # 1. Ask user for input for the new attendee's details (ID, name, etc.)
+    try:
+        attendee_id = input("Attendee ID : ").strip()
+        name = input("Name : ").strip()
+        dob = input("DOB : ").strip()
+        gender = input("Gender : ").strip()
+        company_id = input("Company ID : ").strip()
+
+        # 2. Connection to MySQL and insert the new attendee into the database
+        conn = mysql.connector.connect(**mysql_config)
+        cursor = conn.cursor()
+
+        query = """
+        INSERT INTO attendee (attendeeID, attendeeName, attendeeDOB, attendeeGender, attendeeCompanyID)
+        VALUES (%s, %s, %s, %s, %s)
+        """
+        values = (attendee_id, name, dob, gender, company_id)
+
+        cursor.execute(query, values)
+        
+        # Commit aproving the transaction to save changes to the database
+        conn.commit()
+
+        print("\nAttendee successfully added")
+        
+        conn.close()
+    except mysql.connector.Error as err:
+        # If there's an error related to MySQL (like duplicate ID, foreign key constraint, etc.), it will be caught here
+        print(f"Error: {err}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
 
 def add_attendee_connection():
     print("\n[INFO] 'Add Attendee Connection' functionality will be implemented soon.")
