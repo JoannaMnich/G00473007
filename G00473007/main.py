@@ -18,16 +18,43 @@ neo4j_password = "password123"
 
 def view_speakers_and_sessions():
     try:
+        # 1. Ask user for input 
+        speaker_search = input("Enter speaker name : ").strip()
+        
+        print(f"Session Details For :  {speaker_search}")
+        print("-" * 45) 
+        
         conn = mysql.connector.connect(**mysql_config)
         cursor = conn.cursor()
-        cursor.execute("SELECT sessionTitle, speakerName FROM session")
+        
+        # 2. Querry the database for speakers matching the input 
+        # Search for the string anywhere in the speakerName0
+
+        query = """
+        SELECT s.speakerName, s.sessionTitle, r.roomName 
+        FROM session s
+        JOIN room r ON s.roomID = r.roomID
+        WHERE s.speakerName LIKE %s
+        ORDER BY s.speakerName ASC
+        """
+
+        search_term = f"%{speaker_search}%"
+        cursor.execute(query, (search_term,))
+        
         rows = cursor.fetchall()
-        print("\n--- Speakers & Sessions ---")
-        for row in rows:
-            print(f"Speaker: {row[1]:<20} | Session: {row[0]}")
+        
+        # 3. Check if any results were found and print them in a formatted way
+        if not rows:
+            print("No speakers found of that name")
+        else:
+            for row in rows:
+                # Formatting matches the style in Figure 4
+                print(f"{row[0]:<15} | {row[1]:<25} | {row[2]}")
+        
         conn.close()
     except Exception as e:
         print(f"Error: {e}")
+
 
 def view_attendees_by_company():
     try:
@@ -76,7 +103,7 @@ def view_connected_attendees():
     except Exception as e:
         print(f"Error: {e}")
 
-# --- PLACEHOLDERS FOR ADD FUNCTIONS (Will be implemented in next tasks) ---
+# --- PLACEHOLDERS FOR ADD FUNCTIONS  ---
 
 def add_new_attendee():
     print("\n[INFO] 'Add New Attendee' functionality will be implemented soon.")
@@ -84,7 +111,7 @@ def add_new_attendee():
 def add_attendee_connection():
     print("\n[INFO] 'Add Attendee Connection' functionality will be implemented soon.")
 
-# --- MAIN MENU (Exactly as in Figure 2) ---
+# --- MAIN MENU  ---
 
 def main_menu():
     while True:
@@ -92,13 +119,13 @@ def main_menu():
         print("---------------------")
         print("\nMENU")
         print("====")
-        print("1 – View Speakers & Sessions")
-        print("2 – View Attendees by Company")
-        print("3 – Add New Attendee")
-        print("4 – View Connected Attendees")
-        print("5 – Add Attendee Connection")
-        print("6 – View Rooms")
-        print("x – Exit application")
+        print("1 - View Speakers & Sessions")
+        print("2 - View Attendees by Company")
+        print("3 - Add New Attendee")
+        print("4 - View Connected Attendees")
+        print("5 - Add Attendee Connection")
+        print("6 - View Rooms")
+        print("x -Exit application")
         
         choice = input("Choice: ").strip().lower()
         
