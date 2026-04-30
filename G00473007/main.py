@@ -170,7 +170,7 @@ def add_new_attendee():
         
         conn.close()
     except mysql.connector.Error as err:
-        # If there's an error related to MySQL (like duplicate ID, foreign key constraint, etc.), it will be caught here
+        # If there's an error related to MySQL (like duplicate ID or entered Company ID does not exist, foreign key constraint, etc.), it will be caught here
         print(f"Error: {err}")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
