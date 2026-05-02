@@ -57,57 +57,49 @@ def view_speakers_and_sessions():
 
 
 def view_attendees_by_company():
+    company_id = input("Enter Company ID : ")
+    if not company_id.isdigit():
+        print("Invalid input. Please enter a numeric Company ID.")
+        return
+
     try:
         conn = mysql.connector.connect(**mysql_config)
         cursor = conn.cursor()
 
-        # 1. Validation Loop 
-        while True:
-            company_id_input = input("Enter Company ID : ").strip()
-            if company_id_input.isdigit() and int(company_id_input) > 0:
-                company_id = int(company_id_input)
-                break
-            # If input is invalid, show error and prompt again
-            print("Invalid input. Please enter a positive integer for Company ID.")
-
-        # 2. Check if company exists 
+        # Import company name based on the provided company ID to display it in the header
         cursor.execute("SELECT companyName FROM company WHERE companyID = %s", (company_id,))
-        company_row = cursor.fetchone()
-
-        if not company_row:
-            print(f"Company with ID {company_id} doesn't exist")
-            conn.close()
+        result = cursor.fetchone()
+        
+        if not result:
+            print(f"No company found with ID {company_id}")
             return
+            
+        company_name = result[0]
+        print(f"{company_name} Attendees")
 
-        company_name = company_row[0]
-        print(f"\n{company_name} Attendees")
-        print("-" * 30)
-
-        # 3. Main Query
+        # Actualization of the query to include session date and room name, and to order results by session date
         query = """
-        SELECT a.attendeeName, a.attendeeDOB, s.sessionTitle, s.speakerName, s.sessionDate, r.roomName
+        SELECT a.attendeeName, a.attendeeDOB, s.sessionTitle, sp.speakerName, s.sessionDate, r.roomName
         FROM attendee a
-        JOIN registration reg ON a.attendeeID = reg.attendeeID
-        JOIN session s ON reg.sessionID = s.sessionID
+        JOIN attendee_session asen ON a.attendeeID = asen.attendeeID
+        JOIN session s ON asen.sessionID = s.sessionID
+        JOIN speaker sp ON s.speakerID = sp.speakerID
         JOIN room r ON s.roomID = r.roomID
         WHERE a.attendeeCompanyID = %s
-        ORDER BY a.attendeeName ASC
         """
-        
         cursor.execute(query, (company_id,))
-        rows = cursor.fetchall()
+        attendees = cursor.fetchall()
 
-        # 4. Handle company with no attendees 
-        if not rows:
-            print(f"No attendees found for  {company_name}")
+        if attendees:
+           # Added session date column
+            for row in attendees:
+                print(f"{row[0]:<15} | {str(row[1]):<10} | {row[2]:<25} | {row[3]:<15} | {str(row[4]):<10} | {row[5]}")
         else:
-            for row in rows:
-                print(f"{row[0]:<12} | {row[1]} | {row[2]:<25} | {row[3]:<15} | {row[4]} | {row[5]}")
+            print(f"No attendees found for {company_name}")
 
         conn.close()
-    except Exception as e:
-        print(f"Error: {e}")
-
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
 
 def view_rooms():
     try:
