@@ -149,7 +149,7 @@ def add_new_attendee():
         company_id = input("Company ID : ").strip()
 
         conn = mysql.connector.connect(**mysql_config)
-        cursor = conn.cursor()
+        cursor = conn.cursor(buffered=True)
 
         # --- Check if Attendee ID already exists ---
         cursor.execute("SELECT attendeeID FROM attendee WHERE attendeeID = %s", (attendee_id,))
