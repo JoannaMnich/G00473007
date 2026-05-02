@@ -141,22 +141,22 @@ def add_new_attendee():
         dob = input("DOB : ").strip()
         gender = input("Gender : ").strip()
         
-        # --- NOWOŚĆ: Sprawdzanie płci (Figure 14) ---
+        # --- Check Gender ---
         if gender.lower() not in ["male", "female"]:
             print(f"*** ERROR *** Gender must be Male/Female")
-            return # Przerywamy funkcję, jeśli płeć jest zła
+            return # Pause function if gender is invalid
             
         company_id = input("Company ID : ").strip()
 
         conn = mysql.connector.connect(**mysql_config)
         cursor = conn.cursor()
 
-        # --- NOWOŚĆ: Sprawdzanie czy ID już istnieje (Figure 13) ---
+        # --- Check if Attendee ID already exists ---
         cursor.execute("SELECT attendeeID FROM attendee WHERE attendeeID = %s", (attendee_id,))
         if cursor.fetchone():
             print(f"*** ERROR *** Attendee ID: {attendee_id} already exists")
             conn.close()
-            return # Przerywamy funkcję, jeśli ID już zajęte
+            return # Pause function if ID already exists
 
         query = """
         INSERT INTO attendee (attendeeID, attendeeName, attendeeDOB, attendeeGender, attendeeCompanyID)
@@ -171,7 +171,7 @@ def add_new_attendee():
         conn.close()
 
     except mysql.connector.Error as err:
-        # To obsłuży inne błędy, np. zły Company ID (ten 1452, który miałaś wcześniej)
+        # Catch any MySQL errors and print them in a user-friendly way
         print(f"*** ERROR *** {err}")
 
 def add_attendee_connection():
