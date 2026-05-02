@@ -1,5 +1,7 @@
 import mysql.connector
 from neo4j import GraphDatabase
+import os
+os.system('pip install mysql-connector-python neo4j')
 
 # --- CONFIGURATION ---
 mysql_config = {
