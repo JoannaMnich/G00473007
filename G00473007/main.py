@@ -157,7 +157,14 @@ def add_new_attendee():
             print(f"*** ERROR *** Attendee ID: {attendee_id} already exists")
             conn.close()
             return # Pause function if ID already exists
-
+        
+        # --- Check if Company ID exists ---
+        cursor.execute("SELECT companyID FROM company WHERE companyID = %s", (company_id,))
+        if not cursor.fetchone():
+            print(f"*** ERROR *** Company ID: {company_id} does not exist")
+            conn.close()
+            return
+        
         query = """
         INSERT INTO attendee (attendeeID, attendeeName, attendeeDOB, attendeeGender, attendeeCompanyID)
         VALUES (%s, %s, %s, %s, %s)
@@ -191,7 +198,7 @@ def main_menu():
         print("4 - View Connected Attendees")
         print("5 - Add Attendee Connection")
         print("6 - View Rooms")
-        print("x -Exit application")
+        print("x - Exit application")
         
         choice = input("Choice: ").strip().lower()
         
