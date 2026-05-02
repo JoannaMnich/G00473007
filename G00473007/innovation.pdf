@@ -1,0 +1,24 @@
+A. To ensure the integrity of the MySQL database and provide a better user experience, 
+I implemented custom validation logic in Python that goes beyond simple SQL execution:
+
+1. Gender Constraint Validation: 
+The application actively checks the user input for the Gender field. 
+It only allows "Male" or "Female" (case-insensitive). This prevents the database from being populated with invalid or "garbage" string data, ensuring that the attendeeGender column remains consistent with project requirements.
+
+2. Proactive Duplicate ID Checking: 
+Before attempting an INSERT operation, the program queries the database to see if the Attendee ID already exists. 
+This allows the application to provide a clear, user-friendly error message 
+(*** ERROR *** Attendee ID: 121 already exists) instead of crashing or showing a raw database primary key violation.
+
+3. Foreign Key Existence Verification: 
+I implemented a manual check for the Company ID before record creation. 
+If a user enters a non-existent Company ID, the program catches this and displays a specific error message
+(*** ERROR *** Company ID: 999 does not exist). 
+This prevents technical "Foreign Key Constraint" errors (SQL Error 1452) from being shown to the end-user.
+
+B. Automated Environment Setup (Innovation)
+To make the application more portable and easier to test on the Virtual Machine (VM), 
+I have included logic to ensure necessary libraries are present:
+
+The program handles its own dependencies (like mysql-connector-python and neo4j) 
+or provides clear instructions to the user to ensure a smooth setup on a clean VM environment.
