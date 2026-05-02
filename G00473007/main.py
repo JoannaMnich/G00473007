@@ -135,17 +135,28 @@ def add_new_attendee():
     print("\nAdd New Attendee")
     print("----------------")
     
-    # 1. Ask user for input for the new attendee's details (ID, name, etc.)
     try:
         attendee_id = input("Attendee ID : ").strip()
         name = input("Name : ").strip()
         dob = input("DOB : ").strip()
         gender = input("Gender : ").strip()
+        
+        # --- NOWOŚĆ: Sprawdzanie płci (Figure 14) ---
+        if gender.lower() not in ["male", "female"]:
+            print(f"*** ERROR *** Gender must be Male/Female")
+            return # Przerywamy funkcję, jeśli płeć jest zła
+            
         company_id = input("Company ID : ").strip()
 
-        # 2. Connection to MySQL and insert the new attendee into the database
         conn = mysql.connector.connect(**mysql_config)
         cursor = conn.cursor()
+
+        # --- NOWOŚĆ: Sprawdzanie czy ID już istnieje (Figure 13) ---
+        cursor.execute("SELECT attendeeID FROM attendee WHERE attendeeID = %s", (attendee_id,))
+        if cursor.fetchone():
+            print(f"*** ERROR *** Attendee ID: {attendee_id} already exists")
+            conn.close()
+            return # Przerywamy funkcję, jeśli ID już zajęte
 
         query = """
         INSERT INTO attendee (attendeeID, attendeeName, attendeeDOB, attendeeGender, attendeeCompanyID)
@@ -154,18 +165,14 @@ def add_new_attendee():
         values = (attendee_id, name, dob, gender, company_id)
 
         cursor.execute(query, values)
-        
-        # Commit aproving the transaction to save changes to the database
         conn.commit()
 
         print("\nAttendee successfully added")
-        
         conn.close()
+
     except mysql.connector.Error as err:
-        # If there's an error related to MySQL (like duplicate ID or entered Company ID does not exist, foreign key constraint, etc.), it will be caught here
-        print(f"Error: {err}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        # To obsłuży inne błędy, np. zły Company ID (ten 1452, który miałaś wcześniej)
+        print(f"*** ERROR *** {err}")
 
 def add_attendee_connection():
     print("\n[INFO] 'Add Attendee Connection' functionality will be implemented soon.")
