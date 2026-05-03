@@ -16,6 +16,54 @@ neo4j_uri = "bolt://127.0.0.1:7687"
 neo4j_user = "neo4j"
 neo4j_password = "password123"
 
+neo4j_driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
+
+def view_connected_attendees():
+    print("\nChoice: 4")
+    attendee_id = input("Enter Attendee ID : ")
+
+    try:
+        # 1. Connect to MySQL and get the attendee name for the provided ID to display in the header
+        conn = mysql.connector.connect(**mysql_config)
+        cursor = conn.cursor()
+        
+        # Import attendee name based on the provided attendee ID to display it in the header
+        cursor.execute("SELECT attendeeName FROM attendee WHERE attendeeID = %s", (attendee_id,))
+        mysql_result = cursor.fetchone()
+
+        if not mysql_result:
+            print(f"*** ERROR *** Attendee ID: {attendee_id} does not exist in MySQL")
+            conn.close()
+            return
+
+        attendee_name = mysql_result[0]
+        print(f"Attendee Name: {attendee_name}")
+        print("-" * 30)
+
+        # 2. Check connections in Neo4j
+        # We use the global neo4j_driver that you have defined at the top
+        with neo4j_driver.session() as session:
+            # Search for connections in both directions (-)
+            query = """
+            MATCH (a:Attendee {AttendeeID: $id})-[:CONNECTED_TO]-(connected)
+            RETURN connected.AttendeeID AS id, connected.name AS name
+            """
+            # Convert to int because in Neo4j your IDs are numbers
+            neo4j_result = session.run(query, id=int(attendee_id))
+            connections = list(neo4j_result)
+
+            if connections:
+                print("These attendees are connected:")
+                for person in connections:
+                    print(f"{person['id']}  |  {person['name']}")
+            else:
+                print("No connections")
+
+        conn.close()
+
+    except Exception as e:
+        print(f"*** ERROR *** {e}")
+
 # --- MYSQL FUNCTIONS ---
 
 def view_speakers_and_sessions():

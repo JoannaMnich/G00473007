@@ -22,3 +22,6 @@ I have included logic to ensure necessary libraries are present:
 
 The program handles its own dependencies (like mysql-connector-python and neo4j) 
 or provides clear instructions to the user to ensure a smooth setup on a clean VM environment.
+
+The following graph shows the relationships between attendees in the Neo4j database. 
+Each node represents an attendee, and the 'CONNECTED_TO' edges represent social or professional links between them.
