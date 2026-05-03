@@ -119,17 +119,46 @@ def view_rooms():
 # --- NEO4J FUNCTIONS ---
 
 def view_connected_attendees():
+    print("\nChoice: 4")
+    attendee_id = input("Enter Attendee ID : ").strip()
+
     try:
-        driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
-        with driver.session() as session:
-            query = "MATCH (a:Attendee)-[:CONNECTED_TO]->(b:Attendee) RETURN a.AttendeeID, b.AttendeeID"
-            result = session.run(query)
-            print("\n--- Connected Attendees ---")
-            for record in result:
-                print(f"Attendee {record[0]} <-> Attendee {record[1]}")
-        driver.close()
+        # 1. Pobieramy IMIĘ z MySQL
+        conn = mysql.connector.connect(**mysql_config)
+        cursor = conn.cursor()
+        cursor.execute("SELECT attendeeName FROM attendee WHERE attendeeID = %s", (attendee_id,))
+        mysql_result = cursor.fetchone()
+
+        if not mysql_result:
+            print(f"*** ERROR *** Attendee ID: {attendee_id} does not exist in MySQL")
+            conn.close()
+            return
+
+        print(f"Attendee Name: {mysql_result[0]}")
+        print("-" * 30)
+
+        # 2. Pobieramy POŁĄCZENIA z Neo4j
+        with neo4j_driver.session() as session:
+            # Szukamy relacji CONNECTED_TO w dowolnym kierunku (-)
+            query = """
+            MATCH (a:Attendee {AttendeeID: $id})-[:CONNECTED_TO]-(connected)
+            RETURN connected.AttendeeID AS id, connected.name AS name
+            """
+            # Zamieniamy na int, bo w Neo4j Twoje ID to liczby
+            result = session.run(query, id=int(attendee_id))
+            connections = list(result)
+
+            if connections:
+                print("These attendees are connected:")
+                for person in connections:
+                    print(f"{person['id']}  |  {person['name']}")
+            else:
+                # Obsługa przypadku "No connections" (Figure 19)
+                print("No connections")
+
+        conn.close()
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"*** ERROR *** {e}")
 
 # --- PLACEHOLDERS FOR ADD FUNCTIONS  ---
 
