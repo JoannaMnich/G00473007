@@ -169,7 +169,10 @@ def view_rooms():
 def view_connected_attendees():
     print("\nChoice: 4")
     attendee_id = input("Enter Attendee ID : ").strip()
-
+    if not attendee_id.isdigit():
+        print("*** ERROR *** Invalid attendee ID")
+        return
+    
     try:
         # 1. Połączenie z MySQL
         conn = mysql.connector.connect(**mysql_config)
