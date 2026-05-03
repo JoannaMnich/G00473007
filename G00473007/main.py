@@ -171,9 +171,11 @@ def view_connected_attendees():
     attendee_id = input("Enter Attendee ID : ").strip()
 
     try:
-        # 1. Pobieramy IMIĘ z MySQL
+        # 1. Połączenie z MySQL
         conn = mysql.connector.connect(**mysql_config)
         cursor = conn.cursor()
+        
+        # Pobieramy imię głównego uczestnika
         cursor.execute("SELECT attendeeName FROM attendee WHERE attendeeID = %s", (attendee_id,))
         mysql_result = cursor.fetchone()
 
@@ -185,23 +187,25 @@ def view_connected_attendees():
         print(f"Attendee Name: {mysql_result[0]}")
         print("-" * 30)
 
-        # 2. Pobieramy POŁĄCZENIA z Neo4j
+        # 2. Pobieramy ID połączeń z Neo4j
         with neo4j_driver.session() as session:
-            # Szukamy relacji CONNECTED_TO w dowolnym kierunku (-)
             query = """
             MATCH (a:Attendee {AttendeeID: $id})-[:CONNECTED_TO]-(connected)
-            RETURN connected.AttendeeID AS id, connected.name AS name
+            RETURN connected.AttendeeID AS id
             """
-            # Zamieniamy na int, bo w Neo4j Twoje ID to liczby
-            result = session.run(query, id=int(attendee_id))
-            connections = list(result)
+            neo4j_result = session.run(query, id=int(attendee_id))
+            ids = [record["id"] for record in neo4j_result]
 
-            if connections:
+            if ids:
                 print("These attendees are connected:")
-                for person in connections:
-                    print(f"{person['id']}  |  {person['name']}")
+                for c_id in ids:
+                    # Pobieramy nazwisko powiązanej osoby z MySQL, żeby nie było "None"
+                    cursor.execute("SELECT attendeeName FROM attendee WHERE attendeeID = %s", (c_id,))
+                    name_result = cursor.fetchone()
+                    c_name = name_result[0] if name_result else "Unknown"
+                    
+                    print(f"{c_id}  |  {c_name}")
             else:
-                # Obsługa przypadku "No connections" (Figure 19)
                 print("No connections")
 
         conn.close()
