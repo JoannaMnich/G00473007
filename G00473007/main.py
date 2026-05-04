@@ -40,14 +40,13 @@ def view_connected_attendees():
         print("-" * 30)
 
         # 2. Check connections in Neo4j
-        # We use the global neo4j_driver that you have defined at the top
         with neo4j_driver.session() as session:
             # Search for connections in both directions (-)
             query = """
             MATCH (a:Attendee {AttendeeID: $id})-[:CONNECTED_TO]-(connected)
             RETURN connected.AttendeeID AS id, connected.name AS name
             """
-            # Convert to int because in Neo4j your IDs are numbers
+            # Convert to int because in Neo4j IDs are numbers
             neo4j_result = session.run(query, id=int(attendee_id))
             connections = list(neo4j_result)
 
@@ -173,11 +172,11 @@ def view_connected_attendees():
         return
     
     try:
-        # 1. Połączenie z MySQL
+        # 1. Connect to MySQL
         conn = mysql.connector.connect(**mysql_config)
         cursor = conn.cursor()
         
-        # Pobieramy imię głównego uczestnika
+        # Import the main attendee's name
         cursor.execute("SELECT attendeeName FROM attendee WHERE attendeeID = %s", (attendee_id,))
         mysql_result = cursor.fetchone()
 
@@ -189,7 +188,7 @@ def view_connected_attendees():
         print(f"Attendee Name: {mysql_result[0]}")
         print("-" * 30)
 
-        # 2. Pobieramy ID połączeń z Neo4j
+        # 2. Import connections from Neo4j
         with neo4j_driver.session() as session:
             query = """
             MATCH (a:Attendee {AttendeeID: $id})-[:CONNECTED_TO]-(connected)
@@ -201,7 +200,7 @@ def view_connected_attendees():
             if ids:
                 print("These attendees are connected:")
                 for c_id in ids:
-                    # Pobieramy nazwisko powiązanej osoby z MySQL, żeby nie było "None"
+                    # Import the name of the connected attendee from MySQL, to avoid "None"
                     cursor.execute("SELECT attendeeName FROM attendee WHERE attendeeID = %s", (c_id,))
                     name_result = cursor.fetchone()
                     c_name = name_result[0] if name_result else "Unknown"
@@ -267,7 +266,45 @@ def add_new_attendee():
         print(f"*** ERROR *** {err}")
 
 def add_attendee_connection():
-    print("\n[INFO] 'Add Attendee Connection' functionality will be implemented soon.")
+    print("\nChoice: 5")
+    id1 = input("Enter Attendee 1 ID : ").strip()
+    id2 = input("Enter Attendee 2 ID : ").strip()
+
+    # validation to ensure both IDs are numeric before proceeding
+    if not id1.isdigit() or not id2.isdigit():
+        print("*** ERROR *** Invalid attendee ID")
+        return
+
+    try:
+        # 1. Connect to MySQL and verify both attendee IDs exist, and get their names for Neo4j
+        conn = mysql.connector.connect(**mysql_config)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT attendeeID, attendeeName FROM attendee WHERE attendeeID IN (%s, %s)", (id1, id2))
+        results = cursor.fetchall()
+
+        if len(results) < 2:
+            print("*** ERROR *** One or both Attendee IDs do not exist in MySQL")
+            conn.close()
+            return
+
+        # Map the IDs to names for Neo4j
+        names = {str(r[0]): r[1] for r in results}
+        conn.close()
+
+        # 2. Operations in Neo4j (MERGE creates a node if it doesn't exist, and a relationship only once)
+        with neo4j_driver.session() as session:
+            query = """
+            MERGE (a:Attendee {AttendeeID: $id1}) ON CREATE SET a.name = $name1
+            MERGE (b:Attendee {AttendeeID: $id2}) ON CREATE SET b.name = $name2
+            MERGE (a)-[:CONNECTED_TO]->(b)
+            """
+            session.run(query, id1=int(id1), name1=names[id1], id2=int(id2), name2=names[id2])
+            
+            print(f"Attendee {id1} is now connected to Attendee {id2}")
+
+    except Exception as e:
+        print(f"*** ERROR *** {e}")
 
 # --- MAIN MENU  ---
 
