@@ -266,45 +266,63 @@ def add_new_attendee():
         print(f"*** ERROR *** {err}")
 
 def add_attendee_connection():
-    print("\nChoice: 5")
-    id1 = input("Enter Attendee 1 ID : ").strip()
-    id2 = input("Enter Attendee 2 ID : ").strip()
+    while True:
+        print("\nChoice: 5")
+        id1 = input("Enter Attendee 1 ID : ").strip()
+        id2 = input("Enter Attendee 2 ID : ").strip()
 
-    # validation to ensure both IDs are numeric before proceeding
-    if not id1.isdigit() or not id2.isdigit():
-        print("*** ERROR *** Invalid attendee ID")
-        return
+        # Validation to ensure both IDs are numeric before proceeding
+        if not id1.isdigit() or not id2.isdigit():
+            print("*** ERROR *** Invalid attendee ID")
+            continue 
 
-    try:
-        # 1. Connect to MySQL and verify both attendee IDs exist, and get their names for Neo4j
-        conn = mysql.connector.connect(**mysql_config)
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT attendeeID, attendeeName FROM attendee WHERE attendeeID IN (%s, %s)", (id1, id2))
-        results = cursor.fetchall()
+        # Check to prevent an attendee from connecting to themselves
+        if id1 == id2:
+            print("*** ERROR *** An attendee cannot connect to him/herself")
+            continue
 
-        if len(results) < 2:
-            print("*** ERROR *** One or both Attendee IDs do not exist in MySQL")
-            conn.close()
-            return
-
-        # Map the IDs to names for Neo4j
-        names = {str(r[0]): r[1] for r in results}
-        conn.close()
-
-        # 2. Operations in Neo4j (MERGE creates a node if it doesn't exist, and a relationship only once)
-        with neo4j_driver.session() as session:
-            query = """
-            MERGE (a:Attendee {AttendeeID: $id1}) ON CREATE SET a.name = $name1
-            MERGE (b:Attendee {AttendeeID: $id2}) ON CREATE SET b.name = $name2
-            MERGE (a)-[:CONNECTED_TO]->(b)
-            """
-            session.run(query, id1=int(id1), name1=names[id1], id2=int(id2), name2=names[id2])
+        try:
+            # 1. Connect to MySQL and verify both attendee IDs exist
+            conn = mysql.connector.connect(**mysql_config)
+            cursor = conn.cursor()
             
-            print(f"Attendee {id1} is now connected to Attendee {id2}")
+            cursor.execute("SELECT attendeeID, attendeeName FROM attendee WHERE attendeeID IN (%s, %s)", (id1, id2))
+            results = cursor.fetchall()
 
-    except Exception as e:
-        print(f"*** ERROR *** {e}")
+            # If an attendee doesn't exist in MySQL, a node should not be created in Neo4j
+            if len(results) < 2:
+                print("*** ERROR *** One or both attendee IDs do not exist")
+                conn.close()
+                continue 
+
+            # Map the IDs to names for Neo4j
+            names = {str(r[0]): r[1] for r in results}
+            conn.close()
+
+            # 2. Neo4j operations
+            with neo4j_driver.session() as session:
+                # Check if an attendee is already CONNECTED_TO another attendee
+                check_query = """
+                MATCH (a:Attendee {AttendeeID: $id1})-[r:CONNECTED_TO]-(b:Attendee {AttendeeID: $id2})
+                RETURN r
+                """
+                if session.run(check_query, id1=int(id1), id2=int(id2)).single():
+                    print("*** ERROR *** These attendees are already connected")
+                    continue
+
+                # If all checks pass - create the connection
+                create_query = """
+                MERGE (a:Attendee {AttendeeID: $id1}) ON CREATE SET a.name = $name1
+                MERGE (b:Attendee {AttendeeID: $id2}) ON CREATE SET b.name = $name2
+                MERGE (a)-[:CONNECTED_TO]->(b)
+                """
+                session.run(create_query, id1=int(id1), name1=names[id1], id2=int(id2), name2=names[id2])
+                print(f"Attendee {id1} is now connected to Attendee {id2}")
+                break 
+
+        except Exception as e:
+            print(f"*** ERROR *** {e}")
+            break
 
 # --- MAIN MENU  ---
 
