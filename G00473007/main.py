@@ -273,7 +273,7 @@ def add_attendee_connection():
 
         # Validation to ensure both IDs are numeric before proceeding
         if not id1.isdigit() or not id2.isdigit():
-            print("*** ERROR *** Invalid attendee ID")
+            print("*** ERROR *** Attendee ID must be a numbers")
             continue 
 
         # Check to prevent an attendee from connecting to themselves
@@ -301,15 +301,11 @@ def add_attendee_connection():
 
             # 2. Neo4j operations
             with neo4j_driver.session() as session:
-                # Check if an attendee is already CONNECTED_TO another attendee
-                check_query = """
-                MATCH (a:Attendee {AttendeeID: $id1})-[r:CONNECTED_TO]-(b:Attendee {AttendeeID: $id2})
-                RETURN r
-                """
+                check_query = "MATCH (a:Attendee {AttendeeID: $id1})-[r:CONNECTED_TO]-(b:Attendee {AttendeeID: $id2}) RETURN r"
                 if session.run(check_query, id1=int(id1), id2=int(id2)).single():
                     print("*** ERROR *** These attendees are already connected")
                     continue
-
+                
                 # If all checks pass - create the connection
                 create_query = """
                 MERGE (a:Attendee {AttendeeID: $id1}) ON CREATE SET a.name = $name1
