@@ -17,6 +17,9 @@ neo4j_password = "password123"
 
 neo4j_driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
 
+# Cache for rooms to avoid multiple MySQL queries when viewing attendees by company, as room names are needed in multiple places
+rooms_cache = None
+
 def view_connected_attendees():
     print("\nChoice: 4")
     attendee_id = input("Enter Attendee ID : ")
@@ -305,7 +308,7 @@ def add_attendee_connection():
                 if session.run(check_query, id1=int(id1), id2=int(id2)).single():
                     print("*** ERROR *** These attendees are already connected")
                     continue
-                
+
                 # If all checks pass - create the connection
                 create_query = """
                 MERGE (a:Attendee {AttendeeID: $id1}) ON CREATE SET a.name = $name1
