@@ -153,18 +153,32 @@ def view_attendees_by_company():
         print(f"Error: {err}")
 
 def view_rooms():
-    try:
-        conn = mysql.connector.connect(**mysql_config)
-        cursor = conn.cursor()
-        cursor.execute("SELECT roomName, capacity FROM room")
-        rows = cursor.fetchall()
-        print("\n--- Conference Rooms ---")
-        for row in rows:
-            print(f"Room: {row[0]:<20} | Capacity: {row[1]}")
-        conn.close()
-    except Exception as e:
-        print(f"Error: {e}")
+    global rooms_cache  # Information to use the global variable for caching rooms
+    
+    # 1. Check if rooms are already cached, if not - fetch from MySQL and cache them for future use
+    if rooms_cache is None:
+        try:
+            conn = mysql.connector.connect(**mysql_config)
+            cursor = conn.cursor()
+            # Fetch all rooms and store them in the cache as a list of tuples (RoomID, RoomName, Capacity)
+            cursor.execute("SELECT roomID, roomName, capacity FROM room")
+            rooms_cache = cursor.fetchall()
+            conn.close()
+        except Exception as e:
+            print(f"Error: {e}")
+            return
 
+    # 2. Displaying data (always from cache, after the first fetch)
+    print("\nChoice: 6")
+    print(f"{'RoomID':<8} | {'RoomName':<18} | {'Capacity'}")
+    
+    if rooms_cache:
+        for row in rooms_cache:
+            # row[0] = roomID, row[1] = roomName, row[2] = capacity
+            print(f"{row[0]:<8} | {row[1]:<18} | {row[2]}")
+    else:
+        print("No rooms found")
+        
 # --- NEO4J FUNCTIONS ---
 
 def view_connected_attendees():
